@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>aquí llegue</title>
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html, body { height: 100%; margin: 0; background: #dde3e8; }
+  body { color: #3a4552; font-family: "Trebuchet MS", system-ui, sans-serif; overflow: hidden;
+         touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  main { position: relative; z-index: 1; height: 100%; box-sizing: border-box; display: flex;
+         flex-direction: column; justify-content: flex-end; padding: 1.5rem 1.5rem 2.5rem; pointer-events: none; }
+  h1 { margin: 0; font-size: clamp(2.2rem, 9vw, 5rem); font-weight: 400; letter-spacing: -0.02em; line-height: 1; }
+  p { margin: 0.75rem 0 0; font-size: 1rem; opacity: 0.7; }
+  .boton {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 1rem);
+    right: 1rem;
+    z-index: 2;
+    padding: 0.8rem 1.4rem;
+    border-radius: 999px;
+    background: #f6e3d8;
+    color: #1a0707;
+    text-decoration: none;
+    font-weight: 700;
+    pointer-events: auto;
+  }
+</style>
+</head>
+<body>
+<canvas id="c" aria-hidden="true"></canvas>
+<main>
+  <h1>Silencio.</h1>
+  <a class="boton" href="cuatro.html">Aquí estoy</a>
+</main>
+<script>
+(function () {
+  var canvas = document.getElementById('c');
+  var ctx = canvas.getContext('2d');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var SPACING = 56, w, h, dpr, cols, rows;
+  var ripples = [];
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = window.innerWidth; h = window.innerHeight;
+    SPACING = w < 600 ? 56 : 90;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cols = Math.ceil(w / SPACING) + 1;
+    rows = Math.ceil(h / SPACING) + 1;
+    if (reduce) draw(0);
+  }
+
+  function draw(t) {
+    ctx.clearRect(0, 0, w, h);
+    var cx = w / 2, cy = h / 2;
+    var SPEED = 0.1;      // px por ms: qué tan rápido viaja el silencio
+    var BAND = 130;       // ancho de la onda
+    var LIFE = 7000;      // ms que tarda en desvanecerse
+
+    ripples = ripples.filter(function (r) { return t - r.t0 < LIFE; });
+
+    for (var i = 0; i < cols; i++) {
+      for (var j = 0; j < rows; j++) {
+        var x = i * SPACING, y = j * SPACING;
+        var d = Math.hypot(x - cx, y - cy);
+
+        // respiración muy lenta (~9 s por ciclo)
+        var breath = (Math.sin(t * 0.0007 - d * 0.004) + 1) / 2;
+        var r = SPACING * (0.05 + breath * 0.14);
+        var alpha = 0.35 + breath * 0.25;
+
+        // cada toque manda una onda que "calla" los círculos
+        var hush = 0;
+        for (var k = 0; k < ripples.length; k++) {
+          var rp = ripples[k];
+          var age = t - rp.t0;
+          var diff = Math.hypot(x - rp.x, y - rp.y) - age * SPEED;
+          if (Math.abs(diff) < BAND) {
+            var e = Math.cos((diff / BAND) * Math.PI / 2);
+            hush = Math.max(hush, e * (1 - age / LIFE));
+          }
+        }
+        r *= 1 - hush * 0.9;
+        alpha *= 1 - hush * 0.7;
+
+        ctx.beginPath();
+        ctx.arc(x, y, Math.max(0.3, r), 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(74, 90, 106, ' + alpha + ')';
+        ctx.fill();
+      }
+    }
+  }
+
+  function loop(t) { draw(t); requestAnimationFrame(loop); }
+
+  function touch(e) {
+    var p = e.touches ? e.touches[0] : e;
+    ripples.push({ x: p.clientX, y: p.clientY, t0: performance.now() });
+    if (ripples.length > 6) ripples.shift();
+  }
+  window.addEventListener('touchstart', touch, { passive: true });
+  window.addEventListener('mousedown', touch);
+  window.addEventListener('resize', resize);
+
+  resize();
+  if (!reduce) requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

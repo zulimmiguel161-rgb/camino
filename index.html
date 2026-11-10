@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Silencio</title>
+<style>
+  :root {
+    --bg: #1d2160;
+    --ink: #fff4e0;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) { :root { --bg: #14173f; --ink: #fff4e0; } }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: "Trebuchet MS", system-ui, sans-serif; overflow: hidden; }
+  body { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  main { position: relative; z-index: 1; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-end; padding: 1.5rem 1.5rem 2.5rem; pointer-events: none; }
+  h1 { margin: 0; font-size: clamp(2.5rem, 9vw, 6rem); font-weight: 700; letter-spacing: -0.03em; line-height: 0.95; }
+  p { margin: 0.75rem 0 0; max-width: 32ch; font-size: 1.05rem; line-height: 1.5; opacity: 0.85; }
+  a{
+    width: 10rem;
+    background-color: olive;
+    color: aliceblue;
+    border-radius: 1rem;
+    padding: .3rem;
+    margin-top: .4rem;
+    border: none;
+    box-shadow: none;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+</style>
+</head>
+<body>
+<canvas id="c" aria-hidden="true"></canvas>
+<main>
+  <h1>Aquí estaba</h1>
+  <a class="boton" href="dos.html">Aquí empecé</a>
+</main>
+<script>
+(function () {
+  var canvas = document.getElementById('c');
+  var ctx = canvas.getContext('2d');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var colors = ['#ff6b6b', '#ffd93d', '#4cc9f0', '#f72585'];
+  var SPACING = 44;
+  var w, h, dpr, cols, rows;
+  var touch = { x: -9999, y: -9999 };
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = window.innerWidth; h = window.innerHeight;
+    SPACING = w < 600 ? 44 : 70;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cols = Math.ceil(w / SPACING) + 1;
+    rows = Math.ceil(h / SPACING) + 1;
+    if (reduce) draw(0);
+  }
+
+  function draw(t) {
+    ctx.clearRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'screen';
+    var cx = w / 2, cy = h / 2;
+    for (var i = 0; i < cols; i++) {
+      for (var j = 0; j < rows; j++) {
+        var x = i * SPACING, y = j * SPACING;
+        var d = Math.hypot(x - cx, y - cy);
+        var wave = (Math.sin(t * 0.0018 - d * 0.012) + 1) / 2;
+        var near = Math.max(0, 1 - Math.hypot(x - touch.x, y - touch.y) / (SPACING * 3.4));
+        var r = SPACING * (0.08 + wave * 0.5 + near * 0.45);
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = colors[(i + j) % colors.length];
+        ctx.globalAlpha = 0.55;
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function loop(t) { draw(t); requestAnimationFrame(loop); }
+
+  function move(e) {
+    var p = e.touches ? e.touches[0] : e;
+    touch.x = p.clientX; touch.y = p.clientY;
+  }
+  window.addEventListener('touchstart', move, { passive: true });
+  window.addEventListener('touchmove', move, { passive: true });
+  window.addEventListener('touchend', function () { touch.x = -9999; touch.y = -9999; });
+  window.addEventListener('mousemove', move);
+  window.addEventListener('resize', resize);
+
+  resize();
+  if (!reduce) requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
